@@ -760,7 +760,15 @@ function describeAction(action) {
   if (action[0] === ACTION_WAIT) {
     return 'waits';
   }
-  return `attacks target ${action[4]} with unit ${action[1]} at ${action[2]},${action[3]}`;
+  const attacker = allUnits(state.game).find((unit) => unit.id === action[1]);
+  const target = allUnits(state.game).find((unit) => unit.id === action[4]);
+  if (!attacker || !target) {
+    return `attacks target ${action[4]} with unit ${action[1]} at ${action[2]},${action[3]}`;
+  }
+  const damage = estimateDamage(attacker, target);
+  const remainingHp = target.hp - damage;
+  const outcome = remainingHp <= 0 ? 'KO' : `${remainingHp} hp left`;
+  return `attacks target ${action[4]} for ${damage} dmg (${outcome})`;
 }
 
 function enqueueEffects(previous, next, action, actorLabel) {
