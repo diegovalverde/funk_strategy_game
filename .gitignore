@@ -1,0 +1,18 @@
+# Node
+node_modules/
+dist/
+
+# Logs
+*.log
+
+# Editor / OS
+.DS_Store
+
+# Local env
+.env
+.env.*
+
+# Build outputs
+coverage/
+tmp/
+build/
