@@ -44,6 +44,8 @@ const state = {
   availableActions: [],
   busy: false,
   log: [],
+  effects: [],
+  effectTimer: null,
 };
 
 ui.canvas.addEventListener('click', onBoardClick);
@@ -73,6 +75,7 @@ function resetGame() {
     state.selectedUnitId = null;
     state.availableActions = [];
     state.log = [];
+    clearEffects();
     appendLog('battle reset');
     appendLog('forest tiles reduce incoming damage by 1');
     syncUi();
@@ -98,7 +101,7 @@ async function runAiTurn() {
   try {
     const action = callGame('ai_pick_action', [state.game]);
     appendLog(`AI ${describeAction(action)}`);
-    state.game = callGame('apply_action', [state.game, action]);
+    transitionGame(action, 'ai');
   } catch (error) {
     appendLog(`AI error: ${String(error)}`);
   } finally {
@@ -116,7 +119,7 @@ function onEndTurnClick() {
   if (currentSide(state.game) === SIDE_RED) {
     const action = [ACTION_WAIT, 0, 0, 0, 0];
     appendLog('player ends the turn');
-    state.game = callGame('apply_action', [state.game, action]);
+    transitionGame(action, 'player');
     state.selectedUnitId = null;
     state.availableActions = [];
     syncUi();
@@ -161,7 +164,7 @@ async function onBoardClick(event) {
 function applyPlayerAction(action) {
   try {
     appendLog(`player ${describeAction(action)}`);
-    state.game = callGame('apply_action', [state.game, action]);
+    transitionGame(action, 'player');
     state.selectedUnitId = null;
     state.availableActions = [];
     syncUi();
@@ -280,6 +283,7 @@ function render() {
   drawBoard();
   drawActionHints();
   drawUnits();
+  drawEffects();
   drawHudFrame();
 }
 
@@ -368,6 +372,39 @@ function drawHudFrame() {
   ctx.strokeRect(4, 4, ui.canvas.width - 8, ui.canvas.height - 8);
 }
 
+function drawEffects() {
+  const now = performance.now();
+  const active = [];
+  for (const effect of state.effects) {
+    const age = now - effect.startedAt;
+    if (age >= effect.durationMs) {
+      continue;
+    }
+    const progress = age / effect.durationMs;
+    const alpha = 1 - progress;
+    const lift = progress * 26;
+    const x = effect.x * CELL_SIZE + CELL_SIZE / 2;
+    const y = effect.y * CELL_SIZE + CELL_SIZE / 2 - lift;
+
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.font = '700 28px Georgia, serif';
+    ctx.fillStyle = effect.kind === 'damage' ? '#8f1f1f' : effect.kind === 'defeat' ? '#2a2014' : '#1f6b44';
+    ctx.strokeStyle = 'rgba(255, 248, 231, 0.85)';
+    ctx.lineWidth = 6;
+    ctx.strokeText(effect.text, x, y);
+    ctx.fillText(effect.text, x, y);
+    ctx.restore();
+    active.push(effect);
+  }
+  state.effects = active;
+  if (state.effects.length > 0) {
+    scheduleEffectRender();
+  }
+}
+
 function boardPoint(event) {
   const rect = ui.canvas.getBoundingClientRect();
   const x = Math.floor(((event.clientX - rect.left) / rect.width) * BOARD_SIZE);
@@ -419,6 +456,13 @@ function findActionAt(x, y) {
   return state.availableActions.find((action) => action[2] === x && action[3] === y) ?? null;
 }
 
+function transitionGame(action, actorLabel) {
+  const previous = state.game;
+  const next = callGame('apply_action', [state.game, action]);
+  state.game = next;
+  enqueueEffects(previous, next, action, actorLabel);
+}
+
 function statusLabel(status, side) {
   if (status === STATUS_RED_WIN) {
     return 'Outcome: Red victory';
@@ -461,6 +505,69 @@ function describeAction(action) {
     return 'waits';
   }
   return `attacks target ${action[4]} with unit ${action[1]} at ${action[2]},${action[3]}`;
+}
+
+function enqueueEffects(previous, next, action, actorLabel) {
+  clearEffects();
+  const prevUnits = allUnits(previous);
+  const nextUnits = allUnits(next);
+
+  if (action[0] === ACTION_MOVE) {
+    pushEffect({ x: action[2], y: action[3], text: actorLabel === 'ai' ? 'ADVANCE' : 'MOVE', kind: 'move' });
+    return;
+  }
+
+  if (action[0] === ACTION_WAIT) {
+    pushEffect({
+      x: actorLabel === 'ai' ? 4 : 1,
+      y: actorLabel === 'ai' ? 1 : 4,
+      text: 'WAIT',
+      kind: 'move',
+    });
+    return;
+  }
+
+  if (action[0] !== ACTION_ATTACK) {
+    return;
+  }
+
+  const before = prevUnits.find((unit) => unit.id === action[4]) ?? null;
+  const after = nextUnits.find((unit) => unit.id === action[4]) ?? null;
+  if (!before) {
+    return;
+  }
+  const damage = after ? before.hp - after.hp : before.hp;
+  pushEffect({ x: before.x, y: before.y, text: `-${damage}`, kind: 'damage' });
+  if (!after) {
+    pushEffect({ x: before.x, y: before.y, text: 'KO', kind: 'defeat' });
+  }
+}
+
+function pushEffect(effect) {
+  state.effects.push({
+    ...effect,
+    startedAt: performance.now(),
+    durationMs: effect.kind === 'defeat' ? 1050 : 820,
+  });
+  scheduleEffectRender();
+}
+
+function clearEffects() {
+  state.effects = [];
+  if (state.effectTimer !== null) {
+    cancelAnimationFrame(state.effectTimer);
+    state.effectTimer = null;
+  }
+}
+
+function scheduleEffectRender() {
+  if (state.effectTimer !== null) {
+    return;
+  }
+  state.effectTimer = requestAnimationFrame(() => {
+    state.effectTimer = null;
+    render();
+  });
 }
 
 function terrainColor(terrain, x, y) {
