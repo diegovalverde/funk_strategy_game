@@ -31,19 +31,19 @@ best_move(_ <~ [rest], enemies, current, current_score):
     best_move(rest, enemies, current, current_score).
 
 # Main AI entrypoint: attack first, otherwise advance toward the player.
-ai_pick_action([turn, status, terrain, units] | status != STATUS_PLAYING):
+ai_pick_action([turn, status, turn_count, terrain, units] | status != STATUS_PLAYING):
     [].
 
-ai_pick_action([turn, status, terrain, units]):
-    actions <- collect_actions(units, [turn, status, terrain, units], turn)
+ai_pick_action([turn, status, turn_count, terrain, units]):
+    actions <- collect_actions(units, [turn, status, turn_count, terrain, units], turn)
     attacks <- filter_action_kind(actions, ACTION_ATTACK)
-    ai_pick_from_actions([turn, status, terrain, units], attacks, actions).
+    ai_pick_from_actions([turn, status, turn_count, terrain, units], attacks, actions).
 
 # Prefer the first legal attack; otherwise fall back to best movement.
 ai_pick_from_actions(_, first <~ [rest], _):
     first.
 
-ai_pick_from_actions([turn, status, terrain, units], attacks, actions | len(attacks) = 0):
+ai_pick_from_actions([turn, status, turn_count, terrain, units], attacks, actions | len(attacks) = 0):
     moves <- filter_action_kind(actions, ACTION_MOVE)
     enemies <- units_for_side(units, other_side(turn))
     fallback <- best_move(moves, enemies, [], MAX_SCORE)

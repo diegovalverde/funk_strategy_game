@@ -9,6 +9,7 @@ const SIDE_BLUE = 2;
 const STATUS_PLAYING = 0;
 const STATUS_RED_WIN = 1;
 const STATUS_BLUE_WIN = 2;
+const STATUS_DRAW = 3;
 
 const ACTION_MOVE = 1;
 const ACTION_ATTACK = 2;
@@ -320,6 +321,8 @@ function syncUi() {
     setStatus('Red wins.');
   } else if (status === STATUS_BLUE_WIN) {
     setStatus('Blue wins.');
+  } else if (status === STATUS_DRAW) {
+    setStatus(`Draw on turn ${turnCount(state.game)}.`);
   } else if (state.busy) {
     setStatus('Blue AI is deciding...');
   } else if (actionable === 0 && side === SIDE_RED) {
@@ -560,8 +563,12 @@ function gameStatus(game) {
   return Array.isArray(game) ? game[1] : STATUS_PLAYING;
 }
 
+function turnCount(game) {
+  return Array.isArray(game) ? game[2] : 0;
+}
+
 function terrainAt(game, x, y) {
-  const terrain = Array.isArray(game?.[2]) ? game[2] : [];
+  const terrain = Array.isArray(game?.[3]) ? game[3] : [];
   const entry = terrain.find((tile) => tile[0] === x && tile[1] === y);
   return entry ? entry[2] : TERRAIN_PLAIN;
 }
@@ -572,7 +579,7 @@ function estimateDamage(attacker, target) {
 }
 
 function allUnits(game) {
-  const units = Array.isArray(game?.[3]) ? game[3] : [];
+  const units = Array.isArray(game?.[4]) ? game[4] : [];
   return units.map(([id, side, x, y, hp, move, range, attack]) => ({
     id,
     side,
@@ -668,8 +675,11 @@ function statusLabel(status, side) {
   if (status === STATUS_BLUE_WIN) {
     return 'Outcome: Blue victory';
   }
+  if (status === STATUS_DRAW) {
+    return `Outcome: Draw at turn ${turnCount(state.game)}`;
+  }
   const actionable = countSideActions(side);
-  return `Active side: ${side === SIDE_RED ? 'Red' : 'Blue'}${actionable > 0 ? ` | ${actionable} actions online` : ' | no actions online'}`;
+  return `Active side: ${side === SIDE_RED ? 'Red' : 'Blue'} | turn ${turnCount(state.game)}${actionable > 0 ? ` | ${actionable} actions online` : ' | no actions online'}`;
 }
 
 function selectionText() {

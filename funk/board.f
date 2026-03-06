@@ -79,5 +79,5 @@ flood(n <~ [queue], terrain, units, unit_id, max_steps, visited, acc):
     flood([queue] ++ [next_nodes], terrain, units, unit_id, max_steps, [visited] ++ [next_positions], [acc] ++ [next_positions]).
 
 # Public move-range query used by action generation.
-reachable_tiles([_, _, terrain, units], unit):
+reachable_tiles([_, _, _, terrain, units], unit):
     flood([[unit[2], unit[3], 0]], terrain, units, unit[0], unit[5], [[unit[2], unit[3]]], []).
