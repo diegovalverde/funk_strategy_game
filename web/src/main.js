@@ -43,6 +43,7 @@ const state = {
   game: null,
   selectedUnitId: null,
   availableActions: [],
+  hoveredAction: null,
   busy: false,
   log: [],
   effects: [],
@@ -50,6 +51,8 @@ const state = {
 };
 
 ui.canvas.addEventListener('click', onBoardClick);
+ui.canvas.addEventListener('mousemove', onBoardHover);
+ui.canvas.addEventListener('mouseleave', clearBoardHover);
 ui.reset.addEventListener('click', resetGame);
 ui.endTurn.addEventListener('click', onEndTurnClick);
 ui.roster.addEventListener('click', onRosterClick);
@@ -76,6 +79,7 @@ function resetGame() {
     state.game = callGame('init_game');
     state.selectedUnitId = null;
     state.availableActions = [];
+    state.hoveredAction = null;
     state.log = [];
     clearEffects();
     appendLog('battle reset');
@@ -109,6 +113,7 @@ async function runAiTurn() {
   } finally {
     state.selectedUnitId = null;
     state.availableActions = [];
+    state.hoveredAction = null;
     state.busy = false;
     syncUi();
   }
@@ -124,6 +129,7 @@ function onEndTurnClick() {
     transitionGame(action, 'player');
     state.selectedUnitId = null;
     state.availableActions = [];
+    state.hoveredAction = null;
     syncUi();
     if (currentSide(state.game) === SIDE_BLUE) {
       runAiTurn();
@@ -160,7 +166,30 @@ async function onBoardClick(event) {
 
   state.selectedUnitId = null;
   state.availableActions = [];
+  state.hoveredAction = null;
   syncUi();
+}
+
+function onBoardHover(event) {
+  if (!state.game || state.busy || !state.selectedUnitId) {
+    clearBoardHover();
+    return;
+  }
+  const { x, y } = boardPoint(event);
+  const nextHovered = findActionAt(x, y);
+  if (nextHovered === state.hoveredAction) {
+    return;
+  }
+  state.hoveredAction = nextHovered;
+  render();
+}
+
+function clearBoardHover() {
+  if (!state.hoveredAction) {
+    return;
+  }
+  state.hoveredAction = null;
+  render();
 }
 
 function onRosterClick(event) {
@@ -202,6 +231,7 @@ function applyPlayerAction(action) {
 function selectUnit(unitId, x, y) {
   state.selectedUnitId = unitId;
   state.availableActions = callGame('selected_actions', [state.game, x, y]);
+  state.hoveredAction = null;
   appendLog(`selected unit ${unitId}`);
   syncUi();
 }
@@ -325,6 +355,7 @@ function drawBoard() {
 }
 
 function drawActionHints() {
+  drawMovePathPreview();
   for (const action of state.availableActions) {
     const x = action[2];
     const y = action[3];
@@ -359,6 +390,45 @@ function drawActionHints() {
   ctx.strokeStyle = '#f4ae2b';
   ctx.lineWidth = 5;
   ctx.strokeRect(selected.x * CELL_SIZE + 6, selected.y * CELL_SIZE + 6, CELL_SIZE - 12, CELL_SIZE - 12);
+}
+
+function drawMovePathPreview() {
+  if (!state.hoveredAction || state.hoveredAction[0] !== ACTION_MOVE) {
+    return;
+  }
+  const unit = selectedUnit(state.game, state.selectedUnitId);
+  if (!unit) {
+    return;
+  }
+  const path = buildMovePath(unit, state.hoveredAction[2], state.hoveredAction[3]);
+  if (path.length < 2) {
+    return;
+  }
+
+  ctx.save();
+  ctx.strokeStyle = 'rgba(31, 107, 68, 0.9)';
+  ctx.lineWidth = 8;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  ctx.beginPath();
+  for (let i = 0; i < path.length; i += 1) {
+    const x = path[i].x * CELL_SIZE + CELL_SIZE / 2;
+    const y = path[i].y * CELL_SIZE + CELL_SIZE / 2;
+    if (i === 0) {
+      ctx.moveTo(x, y);
+    } else {
+      ctx.lineTo(x, y);
+    }
+  }
+  ctx.stroke();
+
+  for (const point of path.slice(1, -1)) {
+    ctx.fillStyle = 'rgba(244, 248, 231, 0.92)';
+    ctx.beginPath();
+    ctx.arc(point.x * CELL_SIZE + CELL_SIZE / 2, point.y * CELL_SIZE + CELL_SIZE / 2, 7, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.restore();
 }
 
 function drawUnits() {
@@ -477,6 +547,59 @@ function selectedUnit(game, unitId) {
 
 function findActionAt(x, y) {
   return state.availableActions.find((action) => action[2] === x && action[3] === y) ?? null;
+}
+
+function buildMovePath(unit, targetX, targetY) {
+  const queue = [{ x: unit.x, y: unit.y }];
+  const visited = new Set([tileKey(unit.x, unit.y)]);
+  const parents = new Map();
+  const moveTargets = new Set(
+    state.availableActions
+      .filter((action) => action[0] === ACTION_MOVE)
+      .map((action) => tileKey(action[2], action[3])),
+  );
+  moveTargets.add(tileKey(unit.x, unit.y));
+
+  while (queue.length > 0) {
+    const current = queue.shift();
+    if (current.x === targetX && current.y === targetY) {
+      break;
+    }
+    for (const next of neighbors(current.x, current.y)) {
+      const key = tileKey(next.x, next.y);
+      if (visited.has(key) || !moveTargets.has(key)) {
+        continue;
+      }
+      visited.add(key);
+      parents.set(key, current);
+      queue.push(next);
+    }
+  }
+
+  const out = [];
+  let cursor = { x: targetX, y: targetY };
+  const targetKey = tileKey(targetX, targetY);
+  if (!visited.has(targetKey)) {
+    return out;
+  }
+  while (cursor) {
+    out.push(cursor);
+    cursor = parents.get(tileKey(cursor.x, cursor.y)) ?? null;
+  }
+  return out.reverse();
+}
+
+function neighbors(x, y) {
+  return [
+    { x: x + 1, y },
+    { x: x - 1, y },
+    { x, y: y + 1 },
+    { x, y: y - 1 },
+  ].filter((point) => point.x >= 0 && point.x < BOARD_SIZE && point.y >= 0 && point.y < BOARD_SIZE);
+}
+
+function tileKey(x, y) {
+  return `${x},${y}`;
 }
 
 function transitionGame(action, actorLabel) {
