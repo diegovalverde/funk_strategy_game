@@ -47,11 +47,14 @@ def main() -> int:
         print("built local funk_wasm package")
         return 0
     if copy_prebuilt_pkg(repo_root):
-        print("copied prebuilt funk_wasm package from sibling Funk repo")
+        print(
+            "local wasm build unavailable; copied prebuilt funk_wasm package from sibling Funk repo"
+        )
         return 0
 
     print(
-        "unable to prepare web/src/pkg: local wasm build failed and no prebuilt pkg was found",
+        "unable to prepare web/src/pkg: local wasm build failed and no prebuilt pkg was found. "
+        "Use a rustup-managed toolchain with wasm32-unknown-unknown installed.",
         file=sys.stderr,
     )
     return 1
