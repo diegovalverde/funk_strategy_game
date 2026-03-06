@@ -19,6 +19,25 @@ attack_actions(target <~ [rest], unit | target[1] != unit[1] /\ distance(unit[2]
 attack_actions(_ <~ [rest], unit):
     attack_actions(rest, unit).
 
+# Forest tiles reduce incoming damage by one point.
+terrain_defense_bonus(terrain, x, y | terrain_at(terrain, x, y) = TERRAIN_FOREST):
+    1.
+
+terrain_defense_bonus(_, _, _):
+    0.
+
+# Clamp combat damage so every successful hit still matters.
+clamp_damage(damage | damage < 1):
+    1.
+
+clamp_damage(damage):
+    damage.
+
+# Compute attack damage after terrain mitigation.
+attack_damage(attacker, target, terrain):
+    raw_damage <- attacker[7] - terrain_defense_bonus(terrain, target[2], target[3])
+    clamp_damage(raw_damage).
+
 # Query every legal action for the unit on a clicked tile.
 selected_actions([turn, status, terrain, units], _, _ | status != STATUS_PLAYING):
     [].
@@ -92,7 +111,9 @@ apply_action_inner([turn, status, terrain, units], action | action[0] = ACTION_W
 
 apply_action_inner([turn, status, terrain, units], action):
     attacker <- find_unit_by_id(units, action[1])
-    [turn, status, terrain, damage_units(units, action[4], attacker[7])].
+    target <- find_unit_by_id(units, action[4])
+    damage <- attack_damage(attacker, target, terrain)
+    [turn, status, terrain, damage_units(units, action[4], damage)].
 
 # Update winner state and advance the turn if the match is still live.
 finalize_turn([turn, status, terrain, units]):

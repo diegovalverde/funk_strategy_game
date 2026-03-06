@@ -74,6 +74,7 @@ function resetGame() {
     state.availableActions = [];
     state.log = [];
     appendLog('battle reset');
+    appendLog('forest tiles reduce incoming damage by 1');
     syncUi();
   } catch (error) {
     setStatus(`Reset failed: ${String(error)}`);
@@ -439,6 +440,7 @@ function selectionText() {
     `${skin?.name ?? 'Unit'} #${unit.id}`,
     `Side: ${unit.side === SIDE_RED ? 'Red' : 'Blue'}`,
     `Tile: ${unit.x},${unit.y}`,
+    `Terrain: ${terrainName(terrainAt(state.game, unit.x, unit.y))}`,
     `HP: ${unit.hp}/${unit.maxHp}`,
     `Move: ${unit.move}`,
     `Range: ${unit.range}`,
@@ -469,6 +471,16 @@ function terrainColor(terrain, x, y) {
     return (x + y) % 2 === 0 ? '#6f655b' : '#61574d';
   }
   return (x + y) % 2 === 0 ? '#efe5bf' : '#e4d7ab';
+}
+
+function terrainName(terrain) {
+  if (terrain === TERRAIN_FOREST) {
+    return 'Forest (+1 defense)';
+  }
+  if (terrain === TERRAIN_WALL) {
+    return 'Wall';
+  }
+  return 'Plain';
 }
 
 function setStatus(message) {
