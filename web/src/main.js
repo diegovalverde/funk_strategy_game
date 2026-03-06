@@ -12,6 +12,7 @@ const STATUS_BLUE_WIN = 2;
 
 const ACTION_MOVE = 1;
 const ACTION_ATTACK = 2;
+const ACTION_WAIT = 3;
 
 const TERRAIN_PLAIN = 0;
 const TERRAIN_FOREST = 1;
@@ -47,7 +48,7 @@ const state = {
 
 ui.canvas.addEventListener('click', onBoardClick);
 ui.reset.addEventListener('click', resetGame);
-ui.endTurn.addEventListener('click', runAiTurn);
+ui.endTurn.addEventListener('click', onEndTurnClick);
 
 boot().catch((error) => {
   setStatus(`Startup failed: ${String(error)}`);
@@ -95,12 +96,8 @@ async function runAiTurn() {
 
   try {
     const action = callGame('ai_pick_action', [state.game]);
-    if (!Array.isArray(action) || action.length === 0) {
-      appendLog('AI found no legal action');
-    } else {
-      appendLog(`AI ${describeAction(action)}`);
-      state.game = callGame('apply_action', [state.game, action]);
-    }
+    appendLog(`AI ${describeAction(action)}`);
+    state.game = callGame('apply_action', [state.game, action]);
   } catch (error) {
     appendLog(`AI error: ${String(error)}`);
   } finally {
@@ -109,6 +106,25 @@ async function runAiTurn() {
     state.busy = false;
     syncUi();
   }
+}
+
+function onEndTurnClick() {
+  if (!state.game || state.busy || gameStatus(state.game) !== STATUS_PLAYING) {
+    return;
+  }
+  if (currentSide(state.game) === SIDE_RED) {
+    const action = [ACTION_WAIT, 0, 0, 0, 0];
+    appendLog('player ends the turn');
+    state.game = callGame('apply_action', [state.game, action]);
+    state.selectedUnitId = null;
+    state.availableActions = [];
+    syncUi();
+    if (currentSide(state.game) === SIDE_BLUE) {
+      runAiTurn();
+    }
+    return;
+  }
+  runAiTurn();
 }
 
 async function onBoardClick(event) {
@@ -438,6 +454,9 @@ function describeAction(action) {
   }
   if (action[0] === ACTION_MOVE) {
     return `moves unit ${action[1]} to ${action[2]},${action[3]}`;
+  }
+  if (action[0] === ACTION_WAIT) {
+    return 'waits';
   }
   return `attacks target ${action[4]} with unit ${action[1]} at ${action[2]},${action[3]}`;
 }

@@ -58,6 +58,9 @@ contains_action(_ <~ [rest], wanted):
 action_valid([turn, status, terrain, units], _ | status != STATUS_PLAYING):
     0.
 
+action_valid([turn, status, terrain, units], action | action[0] = ACTION_WAIT):
+    1.
+
 action_valid([turn, status, terrain, units], action):
     unit <- find_unit_by_id(units, action[1])
     action_valid_for_unit([turn, status, terrain, units], unit, action).
@@ -83,6 +86,9 @@ apply_action([turn, status, terrain, units], action):
 # Dispatch to the concrete move or attack state transition.
 apply_action_inner([turn, status, terrain, units], action | action[0] = ACTION_MOVE):
     [turn, status, terrain, move_unit(units, action[1], action[2], action[3])].
+
+apply_action_inner([turn, status, terrain, units], action | action[0] = ACTION_WAIT):
+    [turn, status, terrain, units].
 
 apply_action_inner([turn, status, terrain, units], action):
     attacker <- find_unit_by_id(units, action[1])

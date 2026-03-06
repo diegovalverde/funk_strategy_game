@@ -46,4 +46,12 @@ ai_pick_from_actions(_, first <~ [rest], _):
 ai_pick_from_actions([turn, status, terrain, units], attacks, actions | len(attacks) = 0):
     moves <- filter_action_kind(actions, ACTION_MOVE)
     enemies <- units_for_side(units, other_side(turn))
-    best_move(moves, enemies, [], MAX_SCORE).
+    fallback <- best_move(moves, enemies, [], MAX_SCORE)
+    choose_fallback_action(fallback).
+
+# Convert an empty AI fallback into an explicit wait action.
+choose_fallback_action(action | len(action) = 0):
+    [ACTION_WAIT, 0, 0, 0, 0].
+
+choose_fallback_action(action):
+    action.
