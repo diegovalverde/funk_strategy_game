@@ -209,10 +209,18 @@ button:hover {
 .roster-item {
   display: grid;
   gap: 4px;
+  width: 100%;
   padding: 10px 12px;
   border: 1px solid rgba(79, 62, 31, 0.14);
   border-radius: 14px;
   background: rgba(255, 251, 245, 0.75);
+  text-align: left;
+  box-shadow: none;
+}
+
+.roster-item:hover {
+  transform: none;
+  background: rgba(255, 255, 255, 0.92);
 }
 
 .roster-item-active {

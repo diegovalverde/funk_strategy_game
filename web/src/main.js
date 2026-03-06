@@ -52,6 +52,7 @@ const state = {
 ui.canvas.addEventListener('click', onBoardClick);
 ui.reset.addEventListener('click', resetGame);
 ui.endTurn.addEventListener('click', onEndTurnClick);
+ui.roster.addEventListener('click', onRosterClick);
 
 boot().catch((error) => {
   setStatus(`Startup failed: ${String(error)}`);
@@ -160,6 +161,26 @@ async function onBoardClick(event) {
   state.selectedUnitId = null;
   state.availableActions = [];
   syncUi();
+}
+
+function onRosterClick(event) {
+  if (!state.game || state.busy || gameStatus(state.game) !== STATUS_PLAYING) {
+    return;
+  }
+  const button = event.target.closest('[data-unit-id]');
+  if (!button) {
+    return;
+  }
+  const unitId = Number(button.dataset.unitId);
+  const unit = selectedUnit(state.game, unitId);
+  if (!unit) {
+    return;
+  }
+  if (unit.side !== currentSide(state.game)) {
+    appendLog(`unit ${unitId} is not active this turn`);
+    return;
+  }
+  selectUnit(unit.id, unit.x, unit.y);
 }
 
 function applyPlayerAction(action) {
@@ -522,11 +543,11 @@ function rosterItemHtml(unit, activeSide) {
     classes.push('roster-item-selected');
   }
   return [
-    `<article class="${classes.join(' ')}">`,
+    `<button type="button" class="${classes.join(' ')}" data-unit-id="${unit.id}">`,
     `<div class="roster-row"><span class="roster-name">${skin?.name ?? 'Unit'} #${unit.id}</span><span>${unit.hp}/${unit.maxHp} HP</span></div>`,
     `<div class="roster-row roster-meta"><span>${terrainName(terrainAt(state.game, unit.x, unit.y))}</span><span>${unit.x},${unit.y}</span></div>`,
     `<div class="roster-row roster-meta"><span>Move ${unit.move}</span><span>Range ${unit.range} | ATK ${unit.attack}</span></div>`,
-    '</article>',
+    '</button>',
   ].join('');
 }
 
