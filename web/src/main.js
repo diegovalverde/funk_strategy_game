@@ -356,6 +356,7 @@ function drawBoard() {
 
 function drawActionHints() {
   drawMovePathPreview();
+  drawAttackPreview();
   for (const action of state.availableActions) {
     const x = action[2];
     const y = action[3];
@@ -428,6 +429,49 @@ function drawMovePathPreview() {
     ctx.arc(point.x * CELL_SIZE + CELL_SIZE / 2, point.y * CELL_SIZE + CELL_SIZE / 2, 7, 0, Math.PI * 2);
     ctx.fill();
   }
+  ctx.restore();
+}
+
+function drawAttackPreview() {
+  if (!state.hoveredAction || state.hoveredAction[0] !== ACTION_ATTACK) {
+    return;
+  }
+  const attacker = selectedUnit(state.game, state.selectedUnitId);
+  const target = allUnits(state.game).find((unit) => unit.id === state.hoveredAction[4]);
+  if (!attacker || !target) {
+    return;
+  }
+
+  const startX = attacker.x * CELL_SIZE + CELL_SIZE / 2;
+  const startY = attacker.y * CELL_SIZE + CELL_SIZE / 2;
+  const endX = target.x * CELL_SIZE + CELL_SIZE / 2;
+  const endY = target.y * CELL_SIZE + CELL_SIZE / 2;
+  const damage = estimateDamage(attacker, target);
+
+  ctx.save();
+  ctx.strokeStyle = 'rgba(143, 31, 31, 0.92)';
+  ctx.lineWidth = 6;
+  ctx.setLineDash([12, 10]);
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(startX, startY);
+  ctx.lineTo(endX, endY);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  ctx.fillStyle = 'rgba(255, 248, 231, 0.95)';
+  ctx.beginPath();
+  ctx.arc(endX, endY - 34, 22, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(143, 31, 31, 0.92)';
+  ctx.lineWidth = 3;
+  ctx.stroke();
+
+  ctx.fillStyle = '#8f1f1f';
+  ctx.font = '700 18px Georgia, serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(`-${damage}`, endX, endY - 34);
   ctx.restore();
 }
 
@@ -517,6 +561,11 @@ function terrainAt(game, x, y) {
   const terrain = Array.isArray(game?.[2]) ? game[2] : [];
   const entry = terrain.find((tile) => tile[0] === x && tile[1] === y);
   return entry ? entry[2] : TERRAIN_PLAIN;
+}
+
+function estimateDamage(attacker, target) {
+  const defense = terrainAt(state.game, target.x, target.y) === TERRAIN_FOREST ? 1 : 0;
+  return Math.max(1, attacker.attack - defense);
 }
 
 function allUnits(game) {
