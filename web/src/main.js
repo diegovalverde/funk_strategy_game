@@ -314,6 +314,7 @@ function syncUi() {
   render();
   const side = currentSide(state.game);
   const status = gameStatus(state.game);
+  const actionable = countSideActions(side);
 
   if (status === STATUS_RED_WIN) {
     setStatus('Red wins.');
@@ -321,6 +322,8 @@ function syncUi() {
     setStatus('Blue wins.');
   } else if (state.busy) {
     setStatus('Blue AI is deciding...');
+  } else if (actionable === 0 && side === SIDE_RED) {
+    setStatus('Red has no legal actions. End the turn.');
   } else {
     setStatus(side === SIDE_RED ? 'Red turn. Select a unit.' : 'Blue turn.');
   }
@@ -665,7 +668,8 @@ function statusLabel(status, side) {
   if (status === STATUS_BLUE_WIN) {
     return 'Outcome: Blue victory';
   }
-  return `Active side: ${side === SIDE_RED ? 'Red' : 'Blue'}`;
+  const actionable = countSideActions(side);
+  return `Active side: ${side === SIDE_RED ? 'Red' : 'Blue'}${actionable > 0 ? ` | ${actionable} actions online` : ' | no actions online'}`;
 }
 
 function selectionText() {
@@ -703,6 +707,19 @@ function rosterHtml() {
       return `<section class="roster-side ${sideClass}"><h3>${title}</h3><div class="roster-list">${body}</div></section>`;
     })
     .join('');
+}
+
+function countSideActions(side) {
+  if (!state.game || gameStatus(state.game) !== STATUS_PLAYING) {
+    return 0;
+  }
+  return allUnits(state.game)
+    .filter((unit) => unit.side === side)
+    .reduce((total, unit) => total + legalActionsForUnit(unit).length, 0);
+}
+
+function legalActionsForUnit(unit) {
+  return callGame('selected_actions', [state.game, unit.x, unit.y]);
 }
 
 function rosterItemHtml(unit, activeSide) {
