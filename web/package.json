@@ -1,0 +1,16 @@
+{
+  "name": "funk-strategy-game-web",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "build:game": "python3 ../scripts/build_game_bytecode.py",
+    "build:wasm": "wasm-pack build ../../funk/crates/funk_wasm --target web --out-dir ./src/pkg",
+    "dev": "npm run build:game && npm run build:wasm && vite",
+    "build": "npm run build:game && npm run build:wasm && vite build",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "vite": "^7.3.1"
+  }
+}

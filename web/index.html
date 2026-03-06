@@ -3,40 +3,69 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Funk Strategy Game</title>
+    <title>Funk Tactics</title>
     <link rel="stylesheet" href="./src/style.css" />
   </head>
   <body>
     <div id="app">
-      <header class="topbar">
-        <h1>Funk Strategy Game</h1>
-        <p>Browser UI with Funk gameplay logic.</p>
+      <header class="hero">
+        <div>
+          <p class="eyebrow">Browser + Funk Bytecode</p>
+          <h1>Funk Tactics</h1>
+          <p class="lede">
+            A small 6x6 tactics slice where rendering stays in JavaScript and
+            all rules, movement, combat, and AI decisions run in Funk through
+            the bytecode WASM VM.
+          </p>
+        </div>
+        <div class="hero-actions">
+          <button id="reset" type="button">Reset Battle</button>
+          <button id="end-turn" type="button">Force AI Turn</button>
+        </div>
       </header>
+
       <main class="layout">
-        <section class="board-panel">
-          <canvas id="board" width="640" height="640"></canvas>
+        <section class="board-shell">
+          <canvas id="board" width="720" height="720"></canvas>
+          <div class="legend">
+            <span><i class="swatch plain"></i> Plain</span>
+            <span><i class="swatch forest"></i> Forest</span>
+            <span><i class="swatch wall"></i> Wall</span>
+            <span><i class="swatch move"></i> Move</span>
+            <span><i class="swatch attack"></i> Attack</span>
+          </div>
         </section>
+
         <aside class="sidebar">
-          <div class="card">
+          <section class="card">
             <h2>Status</h2>
-            <p id="status">Scaffold ready.</p>
-          </div>
-          <div class="card">
-            <h2>Selection</h2>
-            <pre id="selection">Nothing selected.</pre>
-          </div>
-          <div class="card">
-            <h2>Planned Boundary</h2>
+            <p id="status">Loading Funk runtime...</p>
+            <p id="turn" class="subtle"></p>
+          </section>
+
+          <section class="card">
+            <h2>Selected Unit</h2>
+            <pre id="selection">None</pre>
+          </section>
+
+          <section class="card">
+            <h2>Battle Notes</h2>
+            <pre id="log">Match booting...</pre>
+          </section>
+
+          <section class="card">
+            <h2>Interop Contract</h2>
             <pre id="contract">init_game()
 selected_actions(state, x, y)
 apply_action(state, action)
 current_side(state)
 game_status(state)
 ai_pick_action(state)</pre>
-          </div>
+          </section>
         </aside>
       </main>
     </div>
+
     <script type="module" src="./src/main.js"></script>
   </body>
 </html>
