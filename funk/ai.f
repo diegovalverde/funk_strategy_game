@@ -30,6 +30,34 @@ best_move(a <~ [rest], enemies, current, current_score | nearest_enemy_distance(
 best_move(_ <~ [rest], enemies, current, current_score):
     best_move(rest, enemies, current, current_score).
 
+# Score an attack by lethality first, then by raw expected damage.
+attack_score(action, units, terrain):
+    attacker <- find_unit_by_id(units, action[1])
+    target <- find_unit_by_id(units, action[4])
+    damage <- attack_damage(attacker, target, terrain)
+    lethality <- attack_lethality(target, damage)
+    lethality * 100 + damage.
+
+# Lethal attacks should dominate non-lethal ones.
+attack_lethality(target, damage | target[4] - damage <= 0):
+    1.
+
+attack_lethality(_, _):
+    0.
+
+# Choose the highest-value attack from the available attack list.
+best_attack(items, _, _, current, _ | len(items) = 0):
+    current.
+
+best_attack(a <~ [rest], units, terrain, current, _ | len(current) = 0):
+    best_attack(rest, units, terrain, a, attack_score(a, units, terrain)).
+
+best_attack(a <~ [rest], units, terrain, current, current_score | attack_score(a, units, terrain) > current_score):
+    best_attack(rest, units, terrain, a, attack_score(a, units, terrain)).
+
+best_attack(_ <~ [rest], units, terrain, current, current_score):
+    best_attack(rest, units, terrain, current, current_score).
+
 # Main AI entrypoint: attack first, otherwise advance toward the player.
 ai_pick_action([turn, status, turn_count, terrain, units] | status != STATUS_PLAYING):
     [].
@@ -39,9 +67,9 @@ ai_pick_action([turn, status, turn_count, terrain, units]):
     attacks <- filter_action_kind(actions, ACTION_ATTACK)
     ai_pick_from_actions([turn, status, turn_count, terrain, units], attacks, actions).
 
-# Prefer the first legal attack; otherwise fall back to best movement.
-ai_pick_from_actions(_, first <~ [rest], _):
-    first.
+# Prefer the best legal attack; otherwise fall back to best movement.
+ai_pick_from_actions([turn, status, turn_count, terrain, units], attacks, _ | len(attacks) > 0):
+    best_attack(attacks, units, terrain, [], -1).
 
 ai_pick_from_actions([turn, status, turn_count, terrain, units], attacks, actions | len(attacks) = 0):
     moves <- filter_action_kind(actions, ACTION_MOVE)
