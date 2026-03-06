@@ -176,6 +176,71 @@ button:hover {
   word-break: break-word;
 }
 
+.roster {
+  display: grid;
+  gap: 14px;
+}
+
+.roster-side {
+  display: grid;
+  gap: 8px;
+}
+
+.roster-side h3 {
+  margin: 0;
+  font-size: 0.88rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.roster-side-red h3 {
+  color: var(--red);
+}
+
+.roster-side-blue h3 {
+  color: var(--blue);
+}
+
+.roster-list {
+  display: grid;
+  gap: 8px;
+}
+
+.roster-item {
+  display: grid;
+  gap: 4px;
+  padding: 10px 12px;
+  border: 1px solid rgba(79, 62, 31, 0.14);
+  border-radius: 14px;
+  background: rgba(255, 251, 245, 0.75);
+}
+
+.roster-item-active {
+  border-color: rgba(33, 79, 140, 0.38);
+  box-shadow: inset 0 0 0 1px rgba(33, 79, 140, 0.18);
+}
+
+.roster-item-selected {
+  border-color: rgba(244, 174, 43, 0.55);
+  box-shadow: inset 0 0 0 1px rgba(244, 174, 43, 0.28);
+}
+
+.roster-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 0.92rem;
+}
+
+.roster-name {
+  font-weight: 700;
+}
+
+.roster-meta {
+  color: var(--muted);
+  font-size: 0.84rem;
+}
+
 .subtle {
   margin-top: 8px;
   color: var(--muted);

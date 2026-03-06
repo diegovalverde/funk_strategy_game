@@ -30,6 +30,7 @@ const ui = {
   status: document.getElementById('status'),
   turn: document.getElementById('turn'),
   selection: document.getElementById('selection'),
+  roster: document.getElementById('roster'),
   log: document.getElementById('log'),
   reset: document.getElementById('reset'),
   endTurn: document.getElementById('end-turn'),
@@ -275,6 +276,7 @@ function syncUi() {
 
   ui.turn.textContent = statusLabel(status, side);
   ui.selection.textContent = selectionText();
+  ui.roster.innerHTML = rosterHtml();
   ui.log.textContent = state.log.join('\n');
 }
 
@@ -492,6 +494,40 @@ function selectionText() {
     '',
     actions || 'No legal actions',
   ].join('\n');
+}
+
+function rosterHtml() {
+  const units = allUnits(state.game);
+  const activeSide = currentSide(state.game);
+  return [SIDE_RED, SIDE_BLUE]
+    .map((side) => {
+      const sideUnits = units.filter((unit) => unit.side === side);
+      const title = side === SIDE_RED ? 'Red squad' : 'Blue squad';
+      const sideClass = side === SIDE_RED ? 'roster-side-red' : 'roster-side-blue';
+      const body = sideUnits.length > 0
+        ? sideUnits.map((unit) => rosterItemHtml(unit, activeSide)).join('')
+        : '<div class="roster-item"><div class="roster-meta">Defeated</div></div>';
+      return `<section class="roster-side ${sideClass}"><h3>${title}</h3><div class="roster-list">${body}</div></section>`;
+    })
+    .join('');
+}
+
+function rosterItemHtml(unit, activeSide) {
+  const skin = UNIT_SKINS[unit.id];
+  const classes = ['roster-item'];
+  if (unit.side === activeSide) {
+    classes.push('roster-item-active');
+  }
+  if (unit.id === state.selectedUnitId) {
+    classes.push('roster-item-selected');
+  }
+  return [
+    `<article class="${classes.join(' ')}">`,
+    `<div class="roster-row"><span class="roster-name">${skin?.name ?? 'Unit'} #${unit.id}</span><span>${unit.hp}/${unit.maxHp} HP</span></div>`,
+    `<div class="roster-row roster-meta"><span>${terrainName(terrainAt(state.game, unit.x, unit.y))}</span><span>${unit.x},${unit.y}</span></div>`,
+    `<div class="roster-row roster-meta"><span>Move ${unit.move}</span><span>Range ${unit.range} | ATK ${unit.attack}</span></div>`,
+    '</article>',
+  ].join('');
 }
 
 function describeAction(action) {
